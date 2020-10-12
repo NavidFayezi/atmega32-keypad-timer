@@ -38,12 +38,14 @@ void main(void)
   //  if(EEPROM_read(200) == 0)
         //systemstate = locked;
    
-   
-    lcd_init(16);
+    
+    int password_length;
+    int password [10];
+    
+    lcd_init(40);
     lcd_clear();                                    // lcd initial settings
     
-    itoa(mychar,data);
-	lcd_puts(data);
+
     
     DDRC = 0xf0;                                   // port C settings, connected to keypad
     PORTC = 0x0e;                                    
@@ -88,13 +90,50 @@ void main(void)
 
     while(1){
         if(systemstate == LOCKED){
-            
+            lcd_clear();
+            lcd_putsf("Locked");
             }
         if(systemstate == UNLOCKED){
-        
+            lcd_clear();
+            lcd_putsf("Unlocked");        
         }
         
         if(systemstate == SETPASSWORD){
+            char temp[5];
+            char stars[10];
+            int i;
+            lcd_clear();
+            lcd_gotoxy(0,0);
+            lcd_putsf("set password(4-9 digits):");
+            while (new_key ==0);
+            new_key =0;
+            password_length = pressed_key % 10;
+            if(password_length < 4)
+                password_length = 4;
+            /////////////////////////////////write in eeprom
+            itoa(password_length,temp);
+            lcd_gotoxy(0,0);
+            lcd_putsf("Enter your password(");
+            lcd_puts(temp);
+            lcd_putsf(" digits):");
+            for(i = 0; i<password_length; i++){
+                 
+                 while(new_key == 0 );
+                 new_key = 0;
+                 password[i] = pressed_key;
+                 lcd_gotoxy(0,1);
+                 lcd_puts(stars);
+                 stars[i]='*';
+                 itoa(pressed_key,temp);
+                 lcd_puts(temp);
+                 delay_ms(1000);
+                }
+            systemstate = UNLOCKED ;
+            lcd_clear();
+            lcd_gotoxy(0,0);
+            lcd_putsf("Password is set, press any key ...");
+            while ( new_key == 0);
+            new_key = 0; 
         }
     
     
@@ -133,7 +172,7 @@ interrupt[TIM1_COMPA] void comparematch(void){     // interrupt happens every se
     
     lcd_gotoxy(0,1);
     sprintf(buffer, "%d%d:%d%d:%d%d" ,h/10,h%10,m/10,m%10,s/10,s%10);
-    lcd_puts(buffer);    
+    // lcd_puts(buffer);    
      
 }
 
