@@ -13,7 +13,7 @@ void EEPROM_write(unsigned char uiAddress, unsigned char ucData);
 
 
 enum SYSTEM_STATE {UNLOCKED , LOCKED, SETPASSWORD };
-enum SYSTEM_STATE systemstate  = LOCKED;
+enum SYSTEM_STATE systemstate  = SETPASSWORD ;
 
 
 int s = 0;
@@ -30,29 +30,30 @@ int pressed_key;
 
 void main(void)
 {
-    char data[5];
-    unsigned char mychar;
+   // char data[5];
+    // unsigned char password_set;
 
    
-    EEPROM_write(201,2);
-    mychar = EEPROM_read(201);
-
-    PORTB.7 =1;
+   // EEPROM_write(201,2);
+  //  if(EEPROM_read(200) == 0)
+        //systemstate = locked;
+   
+   
     lcd_init(16);
     lcd_clear();                                    // lcd initial settings
     
-      itoa(mychar,data);
-	 lcd_puts(data);
+    itoa(mychar,data);
+	lcd_puts(data);
     
     DDRC = 0xf0;                                   // port C settings, connected to keypad
     PORTC = 0x0e;                                    
     
-    // INT2 port
-    DDRB.2 = 0;
+                                                   
+    DDRB.2 = 0;                                    // INT2 port
     PORTB.2 = 1;
        
-    GICR = 1 << INT2;                                   // enable INT2
-    MCUCSR &= ~(1 << ISC2);                            // falling edge for INT2
+    GICR = 1 << INT2;                              // enable INT2
+    MCUCSR &= ~(1 << ISC2);                        // falling edge for INT2
     
     lcd_gotoxy(0,1);
     sprintf(buffer, "%d%d:%d%d:%d%d" ,h/10,h%10,m/10,m%10,s/10,s%10);  // initialize lcd
@@ -85,7 +86,19 @@ void main(void)
     GICR |= 1<<INT1;  // enable INT1
 
 
-                                      
+    while(1){
+        if(systemstate == LOCKED){
+            
+            }
+        if(systemstate == UNLOCKED){
+        
+        }
+        
+        if(systemstate == SETPASSWORD){
+        }
+    
+    
+    }                                  
     
     
 }
