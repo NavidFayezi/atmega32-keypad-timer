@@ -1139,7 +1139,7 @@ __REG_VARS:
 _0x3:
 	.DB  0x7D,0xBD,0xDD,0xED,0x7B,0xBB,0xDB,0xEB
 	.DB  0x77,0xB7,0xD7,0xE7
-_0x18:
+_0x1C:
 	.DB  0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0
 	.DB  0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0
 	.DB  0x0
@@ -1264,6 +1264,9 @@ __GLOBAL_INI_END:
 
 	.CSEG
 ;
+;/*
+;password is 4445
+;*/
 ;
 ;#include <io.h>
 	#ifndef __SLEEP_DEFINED__
@@ -1307,23 +1310,20 @@ __GLOBAL_INI_END:
 ;int pressed_key;
 ;
 ;void main(void)
-; 0000 0020 {
+; 0000 0023 {
 
 	.CSEG
 _main:
 ; .FSTART _main
-; 0000 0021    // char data[5];
-; 0000 0022     // unsigned char password_set;
-; 0000 0023 
 ; 0000 0024 
-; 0000 0025    // EEPROM_write(201,2);
-; 0000 0026   //  if(EEPROM_read(200) == 0)
-; 0000 0027         //systemstate = locked;
-; 0000 0028 
-; 0000 0029 
-; 0000 002A     unsigned char password_length;
-; 0000 002B     unsigned char password [10];                     // digits of password are stored in this array.
-; 0000 002C     int i;
+; 0000 0025 
+; 0000 0026 
+; 0000 0027     // EEPROM_write(100,0xff);                       //uncomment this line to set a new password
+; 0000 0028     unsigned char password_length;
+; 0000 0029     unsigned char password [10];                     // digits of password are stored in this array.
+; 0000 002A     int i;
+; 0000 002B 
+; 0000 002C 
 ; 0000 002D 
 ; 0000 002E     lcd_init(40);
 	SBIW R28,10
@@ -1335,159 +1335,193 @@ _main:
 ; 0000 002F     lcd_clear();                                    // lcd initial settings
 	CALL _lcd_clear
 ; 0000 0030 
-; 0000 0031 
+; 0000 0031     if(EEPROM_read(100) == 0){                      // check to see if device has a password.
+	LDI  R26,LOW(100)
+	RCALL _EEPROM_read
+	CPI  R30,0
+	BRNE _0x4
 ; 0000 0032 
-; 0000 0033     DDRC = 0xf0;                                   // port C settings, connected to keypad
+; 0000 0033         systemstate = LOCKED;
+	LDI  R30,LOW(1)
+	MOV  R5,R30
+; 0000 0034         password_length = EEPROM_read(101);
+	LDI  R26,LOW(101)
+	RCALL _EEPROM_read
+	MOV  R17,R30
+; 0000 0035 
+; 0000 0036         for(i =0 ; i < password_length ; i++){
+	__GETWRN 18,19,0
+_0x6:
+	CALL SUBOPT_0x0
+	BRGE _0x7
+; 0000 0037             password[i] = EEPROM_read(102+i);
+	MOVW R30,R18
+	MOVW R26,R28
+	ADD  R30,R26
+	ADC  R31,R27
+	PUSH R31
+	PUSH R30
+	MOV  R26,R18
+	SUBI R26,-LOW(102)
+	RCALL _EEPROM_read
+	POP  R26
+	POP  R27
+	ST   X,R30
+; 0000 0038             }
+	__ADDWRN 18,19,1
+	RJMP _0x6
+_0x7:
+; 0000 0039 
+; 0000 003A         }
+; 0000 003B 
+; 0000 003C     DDRC = 0xf0;                                   // port C settings, connected to keypad
+_0x4:
 	LDI  R30,LOW(240)
 	OUT  0x14,R30
-; 0000 0034     PORTC = 0x0e;
+; 0000 003D     PORTC = 0x0e;
 	LDI  R30,LOW(14)
 	OUT  0x15,R30
-; 0000 0035 
-; 0000 0036 
-; 0000 0037     DDRB.2 = 0;                                    // INT2 port
+; 0000 003E 
+; 0000 003F 
+; 0000 0040     DDRB.2 = 0;                                    // INT2 port
 	CBI  0x17,2
-; 0000 0038     PORTB.2 = 1;
+; 0000 0041     PORTB.2 = 1;
 	SBI  0x18,2
-; 0000 0039 
-; 0000 003A     GICR = 1 << INT2;                              // enable INT2
+; 0000 0042 
+; 0000 0043     GICR = 1 << INT2;                              // enable INT2
 	LDI  R30,LOW(32)
 	OUT  0x3B,R30
-; 0000 003B     MCUCSR &= ~(1 << ISC2);                        // falling edge for INT2
+; 0000 0044     MCUCSR &= ~(1 << ISC2);                        // falling edge for INT2
 	IN   R30,0x34
 	ANDI R30,0xBF
 	OUT  0x34,R30
-; 0000 003C 
-; 0000 003D     lcd_gotoxy(0,1);
-	CALL SUBOPT_0x0
-; 0000 003E     sprintf(buffer, "%d%d:%d%d:%d%d" ,h/10,h%10,m/10,m%10,s/10,s%10);  // initialize lcd
+; 0000 0045 
+; 0000 0046     lcd_gotoxy(0,1);
 	CALL SUBOPT_0x1
-; 0000 003F     lcd_puts(buffer);
+; 0000 0047     sprintf(buffer, "%d%d:%d%d:%d%d" ,h/10,h%10,m/10,m%10,s/10,s%10);  // initialize lcd
+	CALL SUBOPT_0x2
+; 0000 0048     lcd_puts(buffer);
 	LDI  R26,LOW(_buffer)
 	LDI  R27,HIGH(_buffer)
 	CALL _lcd_puts
-; 0000 0040 
-; 0000 0041 
-; 0000 0042 
-; 0000 0043 
-; 0000 0044     OCR1AH = 0x3D;
+; 0000 0049 
+; 0000 004A 
+; 0000 004B 
+; 0000 004C 
+; 0000 004D     OCR1AH = 0x3D;
 	LDI  R30,LOW(61)
 	OUT  0x2B,R30
-; 0000 0045     OCR1AL = 0x09;                                  // OCR1A = ox3D09 = 15625 --> 15625 * 64 / 1000000 = 1 second
+; 0000 004E     OCR1AL = 0x09;                                  // OCR1A = ox3D09 = 15625 --> 15625 * 64 / 1000000 = 1 second
 	LDI  R30,LOW(9)
 	OUT  0x2A,R30
-; 0000 0046 
-; 0000 0047     #asm("sei");                                    // globally enable interrupts
+; 0000 004F 
+; 0000 0050     #asm("sei");                                    // globally enable interrupts
 	sei
-; 0000 0048     TIMSK |= (1 << TOIE1) | (1 << OCIE1A) ;         // enable timer/counter 1 interrupt and timer/counter 1 compare matc ...
+; 0000 0051     TIMSK |= (1 << TOIE1) | (1 << OCIE1A) ;         // enable timer/counter 1 interrupt and timer/counter 1 compare matc ...
 	IN   R30,0x39
 	ORI  R30,LOW(0x14)
 	OUT  0x39,R30
-; 0000 0049 
-; 0000 004A     TCCR1B = 0x0B;                                  // f(t/c) = f(IO) / 64 from prescaler || enable CTC mode and set TOP ...
+; 0000 0052 
+; 0000 0053     TCCR1B = 0x0B;                                  // f(t/c) = f(IO) / 64 from prescaler || enable CTC mode and set TOP ...
 	LDI  R30,LOW(11)
 	OUT  0x2E,R30
-; 0000 004B 
-; 0000 004C 
-; 0000 004D     DDRB.0 = DDRB.1 = 1; // pin.0 for yellow LED and pin.1 for green LED.
+; 0000 0054 
+; 0000 0055 
+; 0000 0056     DDRB.0 = DDRB.1 = 1;                            // pin.0 for yellow LED and pin.1 for green LED.
 	SBI  0x17,1
 	SBI  0x17,0
-; 0000 004E 
-; 0000 004F 
-; 0000 0050     DDRD.2 = DDRD.3 = 0;
+; 0000 0057 
+; 0000 0058 
+; 0000 0059     DDRD.2 = DDRD.3 = 0;
 	CBI  0x11,3
 	CBI  0x11,2
-; 0000 0051     PORTD.2 = PORTD.3 = 1; //pull up
+; 0000 005A     PORTD.2 = PORTD.3 = 1;                          //pull up
 	SBI  0x12,3
 	SBI  0x12,2
-; 0000 0052 
-; 0000 0053     MCUCR |= 0<<ISC00;
+; 0000 005B 
+; 0000 005C     MCUCR |= 0<<ISC00;
 	IN   R30,0x35
 	OUT  0x35,R30
-; 0000 0054     MCUCR |= 1<<ISC01; // falling edge.
+; 0000 005D     MCUCR |= 1<<ISC01;                              // falling edge.
 	IN   R30,0x35
 	ORI  R30,2
 	OUT  0x35,R30
-; 0000 0055     GICR |= 1<<INT0;  // enable INT0
+; 0000 005E     GICR |= 1<<INT0;                                // enable INT0
 	IN   R30,0x3B
 	ORI  R30,0x40
 	OUT  0x3B,R30
-; 0000 0056 
-; 0000 0057     MCUCR |= 0<<ISC10;
+; 0000 005F 
+; 0000 0060     MCUCR |= 0<<ISC10;
 	IN   R30,0x35
 	OUT  0x35,R30
-; 0000 0058     MCUCR |= 1<<ISC11; // falling edge
+; 0000 0061     MCUCR |= 1<<ISC11;                              // falling edge
 	IN   R30,0x35
 	ORI  R30,8
 	OUT  0x35,R30
-; 0000 0059     GICR |= 1<<INT1;  // enable INT1
+; 0000 0062     GICR |= 1<<INT1;                                // enable INT1
 	IN   R30,0x3B
 	ORI  R30,0x80
 	OUT  0x3B,R30
-; 0000 005A 
-; 0000 005B 
-; 0000 005C     while(1){
-_0x14:
-; 0000 005D         if(systemstate == LOCKED){
+; 0000 0063 
+; 0000 0064 
+; 0000 0065     while(1){
+_0x18:
+; 0000 0066         if(systemstate == LOCKED){
 	LDI  R30,LOW(1)
 	CP   R30,R5
 	BREQ PC+2
-	RJMP _0x17
-; 0000 005E             char stars[10] = {0};
-; 0000 005F             char temp[5];
-; 0000 0060             int wrong_pass = 0;
-; 0000 0061             lcd_clear();
+	RJMP _0x1B
+; 0000 0067             char stars[10] = {0};
+; 0000 0068             char temp[5];
+; 0000 0069             int wrong_pass = 0;
+; 0000 006A             lcd_clear();
 	SBIW R28,17
 	LDI  R24,17
 	LDI  R26,LOW(0)
 	LDI  R27,HIGH(0)
-	LDI  R30,LOW(_0x18*2)
-	LDI  R31,HIGH(_0x18*2)
+	LDI  R30,LOW(_0x1C*2)
+	LDI  R31,HIGH(_0x1C*2)
 	CALL __INITLOCB
 ;	password -> Y+17
 ;	stars -> Y+7
 ;	temp -> Y+2
 ;	wrong_pass -> Y+0
-	CALL SUBOPT_0x2
-; 0000 0062             lcd_gotoxy(0,0);
-; 0000 0063             lcd_putsf("Locked. Enter your password:");
+	CALL SUBOPT_0x3
+; 0000 006B             lcd_gotoxy(0,0);
+; 0000 006C             lcd_putsf("Locked. Enter your password:");
 	__POINTW2FN _0x0,15
 	CALL _lcd_putsf
-; 0000 0064             for(i = 0; i<password_length; i++){
+; 0000 006D             for(i = 0; i<password_length; i++){
 	__GETWRN 18,19,0
-_0x1A:
-	MOV  R30,R17
-	MOVW R26,R18
-	LDI  R31,0
-	CP   R26,R30
-	CPC  R27,R31
-	BRGE _0x1B
-; 0000 0065 
-; 0000 0066                  while(new_key == 0 );
-_0x1C:
-	CALL SUBOPT_0x3
-	BREQ _0x1C
-; 0000 0067                  new_key = 0;
-	CALL SUBOPT_0x4
-; 0000 0068                  lcd_gotoxy(0,1);
+_0x1E:
 	CALL SUBOPT_0x0
-; 0000 0069                  lcd_puts(stars);
-	MOVW R26,R28
-	ADIW R26,7
-	RCALL _lcd_puts
-; 0000 006A                  stars[i]='*';
-	MOVW R26,R28
-	ADIW R26,7
+	BRGE _0x1F
+; 0000 006E 
+; 0000 006F                  while(new_key == 0 );
+_0x20:
+	CALL SUBOPT_0x4
+	BREQ _0x20
+; 0000 0070                  new_key = 0;
 	CALL SUBOPT_0x5
-; 0000 006B                  itoa(pressed_key,temp);
+; 0000 0071                  lcd_gotoxy(0,1);
+	CALL SUBOPT_0x1
+; 0000 0072                  lcd_puts(stars);
+	MOVW R26,R28
+	ADIW R26,7
+	CALL _lcd_puts
+; 0000 0073                  stars[i]='*';
+	MOVW R26,R28
+	ADIW R26,7
+	CALL SUBOPT_0x6
+; 0000 0074                  itoa(pressed_key,temp);
 	MOVW R26,R28
 	ADIW R26,4
 	CALL _itoa
-; 0000 006C                  lcd_puts(temp);
+; 0000 0075                  lcd_puts(temp);
 	MOVW R26,R28
 	ADIW R26,2
-	RCALL _lcd_puts
-; 0000 006D                  if(pressed_key != password[i])
+	CALL _lcd_puts
+; 0000 0076                  if(pressed_key != password[i])
 	MOVW R26,R28
 	ADIW R26,17
 	ADD  R26,R18
@@ -1498,79 +1532,81 @@ _0x1C:
 	LDI  R31,0
 	CP   R30,R26
 	CPC  R31,R27
-	BREQ _0x1F
-; 0000 006E                     wrong_pass = 1;
+	BREQ _0x23
+; 0000 0077                     wrong_pass = 1;
 	LDI  R30,LOW(1)
 	LDI  R31,HIGH(1)
 	ST   Y,R30
 	STD  Y+1,R31
-; 0000 006F 
-; 0000 0070                 }
-_0x1F:
+; 0000 0078 
+; 0000 0079                 }
+_0x23:
 	__ADDWRN 18,19,1
-	RJMP _0x1A
-_0x1B:
-; 0000 0071 
-; 0000 0072                 if(wrong_pass == 0)
+	RJMP _0x1E
+_0x1F:
+; 0000 007A 
+; 0000 007B                 if(wrong_pass == 0)
 	LD   R30,Y
 	LDD  R31,Y+1
 	SBIW R30,0
-	BRNE _0x20
-; 0000 0073                     systemstate = UNLOCKED;
+	BRNE _0x24
+; 0000 007C                     systemstate = UNLOCKED;
 	CLR  R5
-; 0000 0074             }
-_0x20:
+; 0000 007D             }
+_0x24:
 	ADIW R28,17
-; 0000 0075         if(systemstate == UNLOCKED){
-_0x17:
+; 0000 007E         if(systemstate == UNLOCKED){
+_0x1B:
 	TST  R5
-	BRNE _0x21
-; 0000 0076             lcd_clear();
-	RCALL _lcd_clear
-; 0000 0077             lcd_putsf("Unlocked");
+	BRNE _0x25
+; 0000 007F             lcd_clear();
+	CALL _lcd_clear
+; 0000 0080             lcd_putsf("Unlocked");
 	__POINTW2FN _0x0,44
-	RCALL _lcd_putsf
-; 0000 0078         }
-; 0000 0079 
-; 0000 007A         if(systemstate == SETPASSWORD){
-_0x21:
+	CALL _lcd_putsf
+; 0000 0081         }
+; 0000 0082 
+; 0000 0083         if(systemstate == SETPASSWORD){
+_0x25:
 	LDI  R30,LOW(2)
 	CP   R30,R5
 	BREQ PC+2
-	RJMP _0x22
-; 0000 007B             char temp[5];
-; 0000 007C             char stars[10];
-; 0000 007D             lcd_clear();
+	RJMP _0x26
+; 0000 0084             char temp[5];
+; 0000 0085             char stars[10];
+; 0000 0086             lcd_clear();
 	SBIW R28,15
 ;	password -> Y+15
 ;	temp -> Y+10
 ;	stars -> Y+0
-	CALL SUBOPT_0x2
-; 0000 007E             lcd_gotoxy(0,0);
-; 0000 007F             lcd_putsf("set password(4-9 digits):");
-	__POINTW2FN _0x0,53
-	RCALL _lcd_putsf
-; 0000 0080             while (new_key ==0);
-_0x23:
 	CALL SUBOPT_0x3
-	BREQ _0x23
-; 0000 0081             new_key =0;
+; 0000 0087             lcd_gotoxy(0,0);
+; 0000 0088             lcd_putsf("set password(4-9 digits):");
+	__POINTW2FN _0x0,53
+	CALL _lcd_putsf
+; 0000 0089             while (new_key ==0);
+_0x27:
 	CALL SUBOPT_0x4
-; 0000 0082             password_length = pressed_key % 10;
+	BREQ _0x27
+; 0000 008A             new_key =0;
+	CALL SUBOPT_0x5
+; 0000 008B             password_length = pressed_key % 10;
 	LDS  R26,_pressed_key
 	LDS  R27,_pressed_key+1
 	LDI  R30,LOW(10)
 	LDI  R31,HIGH(10)
 	CALL __MODW21
 	MOV  R17,R30
-; 0000 0083             if(password_length < 4)
+; 0000 008C 
+; 0000 008D             if(password_length < 4)                         // minimum length of password is 4 digits.
 	CPI  R17,4
-	BRSH _0x26
-; 0000 0084                 password_length = 4;
+	BRSH _0x2A
+; 0000 008E                 password_length = 4;
 	LDI  R17,LOW(4)
-; 0000 0085             /////////////////////////////////write in eeprom
-; 0000 0086             itoa(password_length,temp);
-_0x26:
+; 0000 008F 
+; 0000 0090 
+; 0000 0091             itoa(password_length,temp);
+_0x2A:
 	MOV  R30,R17
 	LDI  R31,0
 	ST   -Y,R31
@@ -1578,38 +1614,34 @@ _0x26:
 	MOVW R26,R28
 	ADIW R26,12
 	CALL _itoa
-; 0000 0087             lcd_gotoxy(0,0);
+; 0000 0092             lcd_gotoxy(0,0);
 	LDI  R30,LOW(0)
 	ST   -Y,R30
 	LDI  R26,LOW(0)
-	RCALL _lcd_gotoxy
-; 0000 0088             lcd_putsf("Enter your password(");
+	CALL _lcd_gotoxy
+; 0000 0093             lcd_putsf("Enter your password(");
 	__POINTW2FN _0x0,79
-	RCALL _lcd_putsf
-; 0000 0089             lcd_puts(temp);
+	CALL _lcd_putsf
+; 0000 0094             lcd_puts(temp);
 	MOVW R26,R28
 	ADIW R26,10
-	RCALL _lcd_puts
-; 0000 008A             lcd_putsf(" digits):");
+	CALL _lcd_puts
+; 0000 0095             lcd_putsf(" digits):");
 	__POINTW2FN _0x0,69
-	RCALL _lcd_putsf
-; 0000 008B             for(i = 0; i<password_length; i++){
+	CALL _lcd_putsf
+; 0000 0096             for(i = 0; i<password_length; i++){
 	__GETWRN 18,19,0
-_0x28:
-	MOV  R30,R17
-	MOVW R26,R18
-	LDI  R31,0
-	CP   R26,R30
-	CPC  R27,R31
-	BRGE _0x29
-; 0000 008C 
-; 0000 008D                  while(new_key == 0 );
-_0x2A:
-	CALL SUBOPT_0x3
-	BREQ _0x2A
-; 0000 008E                  new_key = 0;
+_0x2C:
+	CALL SUBOPT_0x0
+	BRGE _0x2D
+; 0000 0097 
+; 0000 0098                  while(new_key == 0 );
+_0x2E:
 	CALL SUBOPT_0x4
-; 0000 008F                  password[i] = pressed_key;
+	BREQ _0x2E
+; 0000 0099                  new_key = 0;
+	CALL SUBOPT_0x5
+; 0000 009A                  password[i] = pressed_key;
 	MOVW R30,R18
 	MOVW R26,R28
 	ADIW R26,15
@@ -1617,59 +1649,92 @@ _0x2A:
 	ADC  R31,R27
 	LDS  R26,_pressed_key
 	STD  Z+0,R26
-; 0000 0090                  lcd_gotoxy(0,1);
-	CALL SUBOPT_0x0
-; 0000 0091                  lcd_puts(stars);
+; 0000 009B                  lcd_gotoxy(0,1);
+	CALL SUBOPT_0x1
+; 0000 009C                  lcd_puts(stars);
 	MOVW R26,R28
-	RCALL _lcd_puts
-; 0000 0092                  stars[i]='*';
+	CALL _lcd_puts
+; 0000 009D                  stars[i]='*';
 	MOVW R26,R28
-	CALL SUBOPT_0x5
-; 0000 0093                  itoa(pressed_key,temp);
+	CALL SUBOPT_0x6
+; 0000 009E                  itoa(pressed_key,temp);
 	MOVW R26,R28
 	ADIW R26,12
 	CALL _itoa
-; 0000 0094                  lcd_puts(temp);
+; 0000 009F                  lcd_puts(temp);
 	MOVW R26,R28
 	ADIW R26,10
-	RCALL _lcd_puts
-; 0000 0095 
-; 0000 0096                 }
+	CALL _lcd_puts
+; 0000 00A0 
+; 0000 00A1                 }
 	__ADDWRN 18,19,1
-	RJMP _0x28
-_0x29:
-; 0000 0097             systemstate = LOCKED ;
+	RJMP _0x2C
+_0x2D:
+; 0000 00A2             #asm("cli");                                    // disable interrupts during eeprom write
+	cli
+; 0000 00A3             EEPROM_write(100,0);
+	LDI  R30,LOW(100)
+	ST   -Y,R30
+	LDI  R26,LOW(0)
+	RCALL _EEPROM_write
+; 0000 00A4             EEPROM_write(101,password_length);
+	LDI  R30,LOW(101)
+	ST   -Y,R30
+	MOV  R26,R17
+	RCALL _EEPROM_write
+; 0000 00A5 
+; 0000 00A6             for (i =0 ; i< password_length ; i++)
+	__GETWRN 18,19,0
+_0x32:
+	CALL SUBOPT_0x0
+	BRGE _0x33
+; 0000 00A7                 EEPROM_write(102+i,password[i]);
+	MOV  R30,R18
+	SUBI R30,-LOW(102)
+	ST   -Y,R30
+	MOVW R26,R28
+	ADIW R26,16
+	ADD  R26,R18
+	ADC  R27,R19
+	LD   R26,X
+	RCALL _EEPROM_write
+	__ADDWRN 18,19,1
+	RJMP _0x32
+_0x33:
+; 0000 00A8 #asm("sei");
+	sei
+; 0000 00A9             systemstate = LOCKED ;
 	LDI  R30,LOW(1)
 	MOV  R5,R30
-; 0000 0098             lcd_clear();
-	CALL SUBOPT_0x2
-; 0000 0099             lcd_gotoxy(0,0);
-; 0000 009A             lcd_putsf("Password is set, press any key ...");
+; 0000 00AA             lcd_clear();
+	CALL SUBOPT_0x3
+; 0000 00AB             lcd_gotoxy(0,0);
+; 0000 00AC             lcd_putsf("Password is set, press any key ...");
 	__POINTW2FN _0x0,100
 	RCALL _lcd_putsf
-; 0000 009B             while ( new_key == 0);
-_0x2D:
-	CALL SUBOPT_0x3
-	BREQ _0x2D
-; 0000 009C             new_key = 0;
+; 0000 00AD             while ( new_key == 0);
+_0x34:
 	CALL SUBOPT_0x4
-; 0000 009D         }
+	BREQ _0x34
+; 0000 00AE             new_key = 0;
+	CALL SUBOPT_0x5
+; 0000 00AF         }
 	ADIW R28,15
-; 0000 009E 
-; 0000 009F 
-; 0000 00A0     }
-_0x22:
-	RJMP _0x14
-; 0000 00A1 
-; 0000 00A2 
-; 0000 00A3 }
-_0x30:
-	RJMP _0x30
+; 0000 00B0 
+; 0000 00B1 
+; 0000 00B2     }
+_0x26:
+	RJMP _0x18
+; 0000 00B3 
+; 0000 00B4 
+; 0000 00B5 }
+_0x37:
+	RJMP _0x37
 ; .FEND
 ;
 ;
-;interrupt[TIM1_COMPA] void comparematch(void){     // interrupt happens every second
-; 0000 00A6 interrupt[8] void comparematch(void){
+;interrupt[TIM1_COMPA] void comparematch(void){                      // interrupt happens every second
+; 0000 00B8 interrupt[8] void comparematch(void){
 _comparematch:
 ; .FSTART _comparematch
 	ST   -Y,R0
@@ -1685,80 +1750,80 @@ _comparematch:
 	ST   -Y,R31
 	IN   R30,SREG
 	ST   -Y,R30
-; 0000 00A7 
-; 0000 00A8 
-; 0000 00A9 
-; 0000 00AA 
-; 0000 00AB     if (flag == 0){
+; 0000 00B9 
+; 0000 00BA 
+; 0000 00BB 
+; 0000 00BC 
+; 0000 00BD     if (flag == 0){
 	MOV  R0,R12
 	OR   R0,R13
-	BRNE _0x31
-; 0000 00AC         PORTB.0 = 0;
+	BRNE _0x38
+; 0000 00BE         PORTB.0 = 0;
 	CBI  0x18,0
-; 0000 00AD         PORTB.1 = 0;
+; 0000 00BF         PORTB.1 = 0;
 	CBI  0x18,1
-; 0000 00AE         //Second
-; 0000 00AF         s = s + 1;
+; 0000 00C0         //Second
+; 0000 00C1         s = s + 1;
 	MOVW R30,R6
 	ADIW R30,1
 	MOVW R6,R30
-; 0000 00B0         if (s == 60) {
+; 0000 00C2         if (s == 60) {
 	LDI  R30,LOW(60)
 	LDI  R31,HIGH(60)
 	CP   R30,R6
 	CPC  R31,R7
-	BRNE _0x36
-; 0000 00B1             s = 0;
+	BRNE _0x3D
+; 0000 00C3             s = 0;
 	CLR  R6
 	CLR  R7
-; 0000 00B2             m++;
+; 0000 00C4             m++;
 	MOVW R30,R8
 	ADIW R30,1
 	MOVW R8,R30
-; 0000 00B3             PORTB.0 = 1;
+; 0000 00C5             PORTB.0 = 1;
 	SBI  0x18,0
-; 0000 00B4         }
-; 0000 00B5         //Min
-; 0000 00B6         if (m == 60 ) {
-_0x36:
+; 0000 00C6         }
+; 0000 00C7         //Min
+; 0000 00C8         if (m == 60 ) {
+_0x3D:
 	LDI  R30,LOW(60)
 	LDI  R31,HIGH(60)
 	CP   R30,R8
 	CPC  R31,R9
-	BRNE _0x39
-; 0000 00B7             m = 0;
+	BRNE _0x40
+; 0000 00C9             m = 0;
 	CLR  R8
 	CLR  R9
-; 0000 00B8             h++;
+; 0000 00CA             h++;
 	MOVW R30,R10
 	ADIW R30,1
 	MOVW R10,R30
-; 0000 00B9             PORTB.1 = 1;
+; 0000 00CB             PORTB.1 = 1;
 	SBI  0x18,1
-; 0000 00BA         }
-; 0000 00BB         //Hour
-; 0000 00BC         if (h == 24){
-_0x39:
+; 0000 00CC         }
+; 0000 00CD         //Hour
+; 0000 00CE         if (h == 24){
+_0x40:
 	LDI  R30,LOW(24)
 	LDI  R31,HIGH(24)
 	CP   R30,R10
 	CPC  R31,R11
-	BRNE _0x3C
-; 0000 00BD             h = 0;
+	BRNE _0x43
+; 0000 00CF             h = 0;
 	CLR  R10
 	CLR  R11
-; 0000 00BE         }
-; 0000 00BF     }
-_0x3C:
-; 0000 00C0 
-; 0000 00C1     lcd_gotoxy(0,1);
-_0x31:
-	CALL SUBOPT_0x0
-; 0000 00C2     sprintf(buffer, "%d%d:%d%d:%d%d" ,h/10,h%10,m/10,m%10,s/10,s%10);
+; 0000 00D0         }
+; 0000 00D1     }
+_0x43:
+; 0000 00D2 
+; 0000 00D3     lcd_gotoxy(0,1);
+_0x38:
 	CALL SUBOPT_0x1
-; 0000 00C3     // lcd_puts(buffer);
-; 0000 00C4 
-; 0000 00C5 }
+; 0000 00D4     sprintf(buffer, "%d%d:%d%d:%d%d" ,h/10,h%10,m/10,m%10,s/10,s%10);
+	CALL SUBOPT_0x2
+; 0000 00D5     // lcd_puts(buffer);
+; 0000 00D6 
+; 0000 00D7 }
 	LD   R30,Y+
 	OUT  SREG,R30
 	LD   R31,Y+
@@ -1776,7 +1841,7 @@ _0x31:
 ; .FEND
 ;
 ;interrupt [EXT_INT0] void onPause (void){
-; 0000 00C7 interrupt [2] void onPause (void){
+; 0000 00D9 interrupt [2] void onPause (void){
 _onPause:
 ; .FSTART _onPause
 	ST   -Y,R0
@@ -1784,26 +1849,26 @@ _onPause:
 	ST   -Y,R31
 	IN   R30,SREG
 	ST   -Y,R30
-; 0000 00C8     if (flag == 1) flag = 0;
+; 0000 00DA     if (flag == 1) flag = 0;
 	LDI  R30,LOW(1)
 	LDI  R31,HIGH(1)
 	CP   R30,R12
 	CPC  R31,R13
-	BRNE _0x3D
+	BRNE _0x44
 	CLR  R12
 	CLR  R13
-; 0000 00C9     else if (flag == 0) flag = 1;
-	RJMP _0x3E
-_0x3D:
+; 0000 00DB     else if (flag == 0) flag = 1;
+	RJMP _0x45
+_0x44:
 	MOV  R0,R12
 	OR   R0,R13
-	BRNE _0x3F
+	BRNE _0x46
 	LDI  R30,LOW(1)
 	LDI  R31,HIGH(1)
 	MOVW R12,R30
-; 0000 00CA }
-_0x3F:
-_0x3E:
+; 0000 00DC }
+_0x46:
+_0x45:
 	LD   R30,Y+
 	OUT  SREG,R30
 	LD   R31,Y+
@@ -1813,21 +1878,21 @@ _0x3E:
 ; .FEND
 ;
 ;interrupt [EXT_INT1] void onReStart (void){
-; 0000 00CC interrupt [3] void onReStart (void){
+; 0000 00DE interrupt [3] void onReStart (void){
 _onReStart:
 ; .FSTART _onReStart
 	ST   -Y,R30
 	IN   R30,SREG
-; 0000 00CD     s = 0;
+; 0000 00DF     s = 0;
 	CLR  R6
 	CLR  R7
-; 0000 00CE     m = 0;
+; 0000 00E0     m = 0;
 	CLR  R8
 	CLR  R9
-; 0000 00CF     h = 0;
+; 0000 00E1     h = 0;
 	CLR  R10
 	CLR  R11
-; 0000 00D0 }
+; 0000 00E2 }
 	OUT  SREG,R30
 	LD   R30,Y+
 	RETI
@@ -1835,7 +1900,7 @@ _onReStart:
 ;
 ;
 ;interrupt [EXT_INT2] void keyPressed(void){
-; 0000 00D3 interrupt [4] void keyPressed(void){
+; 0000 00E5 interrupt [4] void keyPressed(void){
 _keyPressed:
 ; .FSTART _keyPressed
 	ST   -Y,R24
@@ -1845,105 +1910,101 @@ _keyPressed:
 	ST   -Y,R31
 	IN   R30,SREG
 	ST   -Y,R30
-; 0000 00D4 
-; 0000 00D5 
-; 0000 00D6 
-; 0000 00D7    // find key
-; 0000 00D8     char data[5];
-; 0000 00D9     int i,index;
-; 0000 00DA     unsigned char pattern;
-; 0000 00DB     // delay_ms(20);   debounce
-; 0000 00DC 
-; 0000 00DD     new_key = 1;
-	SBIW R28,5
-	CALL __SAVELOCR6
-;	data -> Y+6
+; 0000 00E6 
+; 0000 00E7 
+; 0000 00E8 
+; 0000 00E9    // find key
+; 0000 00EA     int i;
+; 0000 00EB     unsigned char pattern;
+; 0000 00EC     // delay_ms(20);   debounce
+; 0000 00ED 
+; 0000 00EE     new_key = 1;
+	CALL __SAVELOCR4
 ;	i -> R16,R17
-;	index -> R18,R19
-;	pattern -> R21
+;	pattern -> R19
 	LDI  R30,LOW(1)
 	LDI  R31,HIGH(1)
 	STS  _new_key,R30
 	STS  _new_key+1,R31
-; 0000 00DE 
-; 0000 00DF 
-; 0000 00E0     DDRC |= 0xf0;                       // leaves portc.0 unchanged. portc.0 is connected to sensor and used by ADC.
+; 0000 00EF 
+; 0000 00F0 
+; 0000 00F1     DDRC |= 0xf0;                                                   // leaves portc.0 unchanged. portc.0 is connected to ...
 	IN   R30,0x14
 	ORI  R30,LOW(0xF0)
 	OUT  0x14,R30
-; 0000 00E1     DDRC &= 0xf1;                       // same as above
+; 0000 00F2     DDRC &= 0xf1;                                                   // same as above
 	IN   R30,0x14
 	ANDI R30,LOW(0xF1)
 	OUT  0x14,R30
-; 0000 00E2     PORTC &= 0x0f;
+; 0000 00F3     PORTC &= 0x0f;
 	IN   R30,0x15
 	ANDI R30,LOW(0xF)
 	OUT  0x15,R30
-; 0000 00E3     PORTC |= 0x0e;
+; 0000 00F4     PORTC |= 0x0e;
 	IN   R30,0x15
 	ORI  R30,LOW(0xE)
 	OUT  0x15,R30
-; 0000 00E4     delay_us(5);
+; 0000 00F5     delay_us(5);
 	__DELAY_USB 2
-; 0000 00E5     pattern = (PINC & 0b00001111);
+; 0000 00F6     pattern = (PINC & 0b00001111);
 	IN   R30,0x13
 	ANDI R30,LOW(0xF)
-	MOV  R21,R30
-; 0000 00E6     DDRC |= 0x0e;
+	MOV  R19,R30
+; 0000 00F7     DDRC |= 0x0e;
 	IN   R30,0x14
 	ORI  R30,LOW(0xE)
 	OUT  0x14,R30
-; 0000 00E7     DDRC &= 0x0f;
+; 0000 00F8     DDRC &= 0x0f;
 	IN   R30,0x14
 	ANDI R30,LOW(0xF)
 	OUT  0x14,R30
-; 0000 00E8     PORTC |= 0xf0;
+; 0000 00F9     PORTC |= 0xf0;
 	IN   R30,0x15
 	ORI  R30,LOW(0xF0)
 	OUT  0x15,R30
-; 0000 00E9     PORTC &= 0xf1;
+; 0000 00FA     PORTC &= 0xf1;
 	IN   R30,0x15
 	ANDI R30,LOW(0xF1)
 	OUT  0x15,R30
-; 0000 00EA     delay_us(5);
+; 0000 00FB     delay_us(5);
 	__DELAY_USB 2
-; 0000 00EB     pattern |= (PINC & 0b11110000) | 0x01;    // lsb is not connected to keypad, always gets the value 1
+; 0000 00FC     pattern |= (PINC & 0b11110000) | 0x01;                          // lsb is not connected to keypad, always gets the v ...
 	IN   R30,0x13
 	ANDI R30,LOW(0xF0)
 	ORI  R30,1
-	OR   R21,R30
-; 0000 00EC     for(i = 0 ; i < 12 ; i++){
+	OR   R19,R30
+; 0000 00FD     for(i = 0 ; i < 12 ; i++){
 	__GETWRN 16,17,0
-_0x41:
+_0x48:
 	__CPWRN 16,17,12
-	BRGE _0x42
-; 0000 00ED         if(keypadPatterns[i] == pattern){
+	BRGE _0x49
+; 0000 00FE         if(keypadPatterns[i] == pattern){
 	LDI  R26,LOW(_keypadPatterns)
 	LDI  R27,HIGH(_keypadPatterns)
 	ADD  R26,R16
 	ADC  R27,R17
 	LD   R26,X
-	CP   R21,R26
-	BRNE _0x43
-; 0000 00EE             pressed_key = i;
+	CP   R19,R26
+	BRNE _0x4A
+; 0000 00FF             pressed_key = i;
 	__PUTWMRN _pressed_key,0,16,17
-; 0000 00EF             break;
-	RJMP _0x42
-; 0000 00F0             }
-; 0000 00F1 
-; 0000 00F2     }
-_0x43:
+; 0000 0100             break;
+	RJMP _0x49
+; 0000 0101             }
+; 0000 0102 
+; 0000 0103     }
+_0x4A:
 	__ADDWRN 16,17,1
-	RJMP _0x41
-_0x42:
-; 0000 00F3 
-; 0000 00F4 
-; 0000 00F5 
-; 0000 00F6 
-; 0000 00F7 
-; 0000 00F8 }
-	CALL __LOADLOCR6
-	ADIW R28,11
+	RJMP _0x48
+_0x49:
+; 0000 0104 
+; 0000 0105 
+; 0000 0106 
+; 0000 0107 
+; 0000 0108 
+; 0000 0109 }
+	CALL __LOADLOCR4
+	ADIW R28,4
 	LD   R30,Y+
 	OUT  SREG,R30
 	LD   R31,Y+
@@ -1955,37 +2016,67 @@ _0x42:
 ; .FEND
 ;
 ;
-;void EEPROM_write(unsigned char uiAddress, unsigned char ucData){ // address is in 0-255 range
-; 0000 00FB void EEPROM_write(unsigned char uiAddress, unsigned char ucData){
-; 0000 00FC     /* Wait for completion of previous write */
-; 0000 00FD     while(EECR & (1<<EEWE));
+;void EEPROM_write(unsigned char uiAddress, unsigned char ucData){    // address is in 0-255 range
+; 0000 010C void EEPROM_write(unsigned char uiAddress, unsigned char ucData){
+_EEPROM_write:
+; .FSTART _EEPROM_write
+; 0000 010D     /* Wait for completion of previous write */
+; 0000 010E     while(EECR & (1<<EEWE));
+	ST   -Y,R26
 ;	uiAddress -> Y+1
 ;	ucData -> Y+0
-; 0000 00FE     /* Set up address and data registers */
-; 0000 00FF     EEARH = 0;
-; 0000 0100     EEARL = uiAddress;
-; 0000 0101 
-; 0000 0102     EEDR = ucData;
-; 0000 0103     /* Write logical one to EEMWE */
-; 0000 0104     EECR |= (1<<EEMWE);
-; 0000 0105     /* Start eeprom write by setting EEWE */
-; 0000 0106     EECR |= (1<<EEWE);
-; 0000 0107 }
+_0x4B:
+	SBIC 0x1C,1
+	RJMP _0x4B
+; 0000 010F     /* Set up address and data registers */
+; 0000 0110     EEARH = 0;
+	LDI  R30,LOW(0)
+	OUT  0x1F,R30
+; 0000 0111     EEARL = uiAddress;
+	LDD  R30,Y+1
+	OUT  0x1E,R30
+; 0000 0112 
+; 0000 0113     EEDR = ucData;
+	LD   R30,Y
+	OUT  0x1D,R30
+; 0000 0114     /* Write logical one to EEMWE */
+; 0000 0115     EECR |= (1<<EEMWE);
+	SBI  0x1C,2
+; 0000 0116     /* Start eeprom write by setting EEWE */
+; 0000 0117     EECR |= (1<<EEWE);
+	SBI  0x1C,1
+; 0000 0118 }
+	RJMP _0x20C0004
+; .FEND
 ;
 ;
 ;unsigned char EEPROM_read(unsigned char uiAddress){     // address is in 0-255 range
-; 0000 010A unsigned char EEPROM_read(unsigned char uiAddress){
-; 0000 010B     /* Wait for completion of previous write */
-; 0000 010C     while(EECR & (1<<EEWE));
+; 0000 011B unsigned char EEPROM_read(unsigned char uiAddress){
+_EEPROM_read:
+; .FSTART _EEPROM_read
+; 0000 011C     /* Wait for completion of previous write */
+; 0000 011D     while(EECR & (1<<EEWE));
+	ST   -Y,R26
 ;	uiAddress -> Y+0
-; 0000 010D     /* Set up address register */
-; 0000 010E     EEARH = 0;
-; 0000 010F     EEARL = uiAddress;
-; 0000 0110     /* Start eeprom read by writing EERE */
-; 0000 0111     EECR |= (1<<EERE);
-; 0000 0112     /* Return data from data register */
-; 0000 0113     return EEDR;
-; 0000 0114 }
+_0x4E:
+	SBIC 0x1C,1
+	RJMP _0x4E
+; 0000 011E     /* Set up address register */
+; 0000 011F     EEARH = 0;
+	LDI  R30,LOW(0)
+	OUT  0x1F,R30
+; 0000 0120     EEARL = uiAddress;
+	LD   R30,Y
+	OUT  0x1E,R30
+; 0000 0121     /* Start eeprom read by writing EERE */
+; 0000 0122     EECR |= (1<<EERE);
+	SBI  0x1C,0
+; 0000 0123     /* Return data from data register */
+; 0000 0124     return EEDR;
+	IN   R30,0x1D
+	RJMP _0x20C0002
+; 0000 0125 }
+; .FEND
 	#ifndef __SLEEP_DEFINED__
 	#define __SLEEP_DEFINED__
 	.EQU __se_bit=0x80
@@ -2046,17 +2137,18 @@ _lcd_gotoxy:
 	STS  __lcd_x,R30
 	LD   R30,Y
 	STS  __lcd_y,R30
+_0x20C0004:
 	ADIW R28,2
 	RET
 ; .FEND
 _lcd_clear:
 ; .FSTART _lcd_clear
 	LDI  R26,LOW(2)
-	CALL SUBOPT_0x6
+	CALL SUBOPT_0x7
 	LDI  R26,LOW(12)
 	RCALL __lcd_write_data
 	LDI  R26,LOW(1)
-	CALL SUBOPT_0x6
+	CALL SUBOPT_0x7
 	LDI  R30,LOW(0)
 	STS  __lcd_y,R30
 	STS  __lcd_x,R30
@@ -2161,9 +2253,9 @@ _lcd_init:
 	LDI  R26,LOW(20)
 	LDI  R27,0
 	CALL _delay_ms
-	CALL SUBOPT_0x7
-	CALL SUBOPT_0x7
-	CALL SUBOPT_0x7
+	CALL SUBOPT_0x8
+	CALL SUBOPT_0x8
+	CALL SUBOPT_0x8
 	LDI  R26,LOW(32)
 	RCALL __lcd_write_nibble_G100
 	__DELAY_USB 33
@@ -2351,7 +2443,7 @@ _0x2040016:
 	LDI  R17,LOW(1)
 	RJMP _0x204001E
 _0x204001D:
-	CALL SUBOPT_0x8
+	CALL SUBOPT_0x9
 _0x204001E:
 	RJMP _0x204001B
 _0x204001C:
@@ -2359,7 +2451,7 @@ _0x204001C:
 	BRNE _0x204001F
 	CPI  R18,37
 	BRNE _0x2040020
-	CALL SUBOPT_0x8
+	CALL SUBOPT_0x9
 	RJMP _0x20400CC
 _0x2040020:
 	LDI  R17,LOW(2)
@@ -2416,26 +2508,26 @@ _0x2040029:
 	MOV  R30,R18
 	CPI  R30,LOW(0x63)
 	BRNE _0x204002F
-	CALL SUBOPT_0x9
+	CALL SUBOPT_0xA
 	LDD  R30,Y+16
 	LDD  R31,Y+16+1
 	LDD  R26,Z+4
 	ST   -Y,R26
-	CALL SUBOPT_0xA
+	CALL SUBOPT_0xB
 	RJMP _0x2040030
 _0x204002F:
 	CPI  R30,LOW(0x73)
 	BRNE _0x2040032
-	CALL SUBOPT_0x9
-	CALL SUBOPT_0xB
+	CALL SUBOPT_0xA
+	CALL SUBOPT_0xC
 	CALL _strlen
 	MOV  R17,R30
 	RJMP _0x2040033
 _0x2040032:
 	CPI  R30,LOW(0x70)
 	BRNE _0x2040035
-	CALL SUBOPT_0x9
-	CALL SUBOPT_0xB
+	CALL SUBOPT_0xA
+	CALL SUBOPT_0xC
 	CALL _strlenf
 	MOV  R17,R30
 	ORI  R16,LOW(8)
@@ -2480,8 +2572,8 @@ _0x2040040:
 _0x204003D:
 	SBRS R16,2
 	RJMP _0x2040042
-	CALL SUBOPT_0x9
-	CALL SUBOPT_0xC
+	CALL SUBOPT_0xA
+	CALL SUBOPT_0xD
 	LDD  R26,Y+11
 	TST  R26
 	BRPL _0x2040043
@@ -2501,8 +2593,8 @@ _0x2040044:
 _0x2040045:
 	RJMP _0x2040046
 _0x2040042:
-	CALL SUBOPT_0x9
-	CALL SUBOPT_0xC
+	CALL SUBOPT_0xA
+	CALL SUBOPT_0xD
 _0x2040046:
 _0x2040036:
 	SBRC R16,0
@@ -2525,7 +2617,7 @@ _0x204004D:
 _0x204004B:
 	LDI  R18,LOW(32)
 _0x204004E:
-	CALL SUBOPT_0x8
+	CALL SUBOPT_0x9
 	SUBI R21,LOW(1)
 	RJMP _0x2040048
 _0x204004A:
@@ -2551,7 +2643,7 @@ _0x2040053:
 	STD  Y+6,R26
 	STD  Y+6+1,R27
 _0x2040054:
-	CALL SUBOPT_0x8
+	CALL SUBOPT_0x9
 	CPI  R21,0
 	BREQ _0x2040055
 	SUBI R21,LOW(1)
@@ -2630,7 +2722,7 @@ _0x20400CD:
 	RJMP _0x204006A
 	ANDI R16,LOW(251)
 	ST   -Y,R20
-	CALL SUBOPT_0xA
+	CALL SUBOPT_0xB
 	CPI  R21,0
 	BREQ _0x204006B
 	SUBI R21,LOW(1)
@@ -2638,7 +2730,7 @@ _0x204006B:
 _0x204006A:
 _0x2040069:
 _0x2040061:
-	CALL SUBOPT_0x8
+	CALL SUBOPT_0x9
 	CPI  R21,0
 	BREQ _0x204006C
 	SUBI R21,LOW(1)
@@ -2660,7 +2752,7 @@ _0x204006E:
 	SUBI R21,LOW(1)
 	LDI  R30,LOW(32)
 	ST   -Y,R30
-	CALL SUBOPT_0xA
+	CALL SUBOPT_0xB
 	RJMP _0x204006E
 _0x2040070:
 _0x204006D:
@@ -2684,7 +2776,7 @@ _sprintf:
 	MOV  R15,R24
 	SBIW R28,6
 	CALL __SAVELOCR4
-	CALL SUBOPT_0xD
+	CALL SUBOPT_0xE
 	SBIW R30,0
 	BRNE _0x2040072
 	LDI  R30,LOW(65535)
@@ -2695,7 +2787,7 @@ _0x2040072:
 	ADIW R26,6
 	CALL __ADDW2R15
 	MOVW R16,R26
-	CALL SUBOPT_0xD
+	CALL SUBOPT_0xE
 	STD  Y+6,R30
 	STD  Y+6+1,R31
 	LDI  R30,LOW(0)
@@ -2793,13 +2885,22 @@ __seed_G101:
 	.CSEG
 ;OPTIMIZER ADDED SUBROUTINE, CALLED 4 TIMES, CODE SIZE REDUCTION:6 WORDS
 SUBOPT_0x0:
+	MOV  R30,R17
+	MOVW R26,R18
+	LDI  R31,0
+	CP   R26,R30
+	CPC  R27,R31
+	RET
+
+;OPTIMIZER ADDED SUBROUTINE, CALLED 4 TIMES, CODE SIZE REDUCTION:6 WORDS
+SUBOPT_0x1:
 	LDI  R30,LOW(0)
 	ST   -Y,R30
 	LDI  R26,LOW(1)
 	JMP  _lcd_gotoxy
 
 ;OPTIMIZER ADDED SUBROUTINE, CALLED 2 TIMES, CODE SIZE REDUCTION:61 WORDS
-SUBOPT_0x1:
+SUBOPT_0x2:
 	LDI  R30,LOW(_buffer)
 	LDI  R31,HIGH(_buffer)
 	ST   -Y,R31
@@ -2849,7 +2950,7 @@ SUBOPT_0x1:
 	RET
 
 ;OPTIMIZER ADDED SUBROUTINE, CALLED 3 TIMES, CODE SIZE REDUCTION:7 WORDS
-SUBOPT_0x2:
+SUBOPT_0x3:
 	CALL _lcd_clear
 	LDI  R30,LOW(0)
 	ST   -Y,R30
@@ -2857,21 +2958,21 @@ SUBOPT_0x2:
 	JMP  _lcd_gotoxy
 
 ;OPTIMIZER ADDED SUBROUTINE, CALLED 4 TIMES, CODE SIZE REDUCTION:6 WORDS
-SUBOPT_0x3:
+SUBOPT_0x4:
 	LDS  R30,_new_key
 	LDS  R31,_new_key+1
 	SBIW R30,0
 	RET
 
 ;OPTIMIZER ADDED SUBROUTINE, CALLED 4 TIMES, CODE SIZE REDUCTION:6 WORDS
-SUBOPT_0x4:
+SUBOPT_0x5:
 	LDI  R30,LOW(0)
 	STS  _new_key,R30
 	STS  _new_key+1,R30
 	RET
 
 ;OPTIMIZER ADDED SUBROUTINE, CALLED 2 TIMES, CODE SIZE REDUCTION:5 WORDS
-SUBOPT_0x5:
+SUBOPT_0x6:
 	ADD  R26,R18
 	ADC  R27,R19
 	LDI  R30,LOW(42)
@@ -2883,21 +2984,21 @@ SUBOPT_0x5:
 	RET
 
 ;OPTIMIZER ADDED SUBROUTINE, CALLED 2 TIMES, CODE SIZE REDUCTION:1 WORDS
-SUBOPT_0x6:
+SUBOPT_0x7:
 	CALL __lcd_write_data
 	LDI  R26,LOW(3)
 	LDI  R27,0
 	JMP  _delay_ms
 
 ;OPTIMIZER ADDED SUBROUTINE, CALLED 3 TIMES, CODE SIZE REDUCTION:5 WORDS
-SUBOPT_0x7:
+SUBOPT_0x8:
 	LDI  R26,LOW(48)
 	CALL __lcd_write_nibble_G100
 	__DELAY_USB 33
 	RET
 
 ;OPTIMIZER ADDED SUBROUTINE, CALLED 5 TIMES, CODE SIZE REDUCTION:13 WORDS
-SUBOPT_0x8:
+SUBOPT_0x9:
 	ST   -Y,R18
 	LDD  R26,Y+13
 	LDD  R27,Y+13+1
@@ -2907,7 +3008,7 @@ SUBOPT_0x8:
 	RET
 
 ;OPTIMIZER ADDED SUBROUTINE, CALLED 5 TIMES, CODE SIZE REDUCTION:9 WORDS
-SUBOPT_0x9:
+SUBOPT_0xA:
 	LDD  R30,Y+16
 	LDD  R31,Y+16+1
 	SBIW R30,4
@@ -2916,7 +3017,7 @@ SUBOPT_0x9:
 	RET
 
 ;OPTIMIZER ADDED SUBROUTINE, CALLED 3 TIMES, CODE SIZE REDUCTION:3 WORDS
-SUBOPT_0xA:
+SUBOPT_0xB:
 	LDD  R26,Y+13
 	LDD  R27,Y+13+1
 	LDD  R30,Y+15
@@ -2925,7 +3026,7 @@ SUBOPT_0xA:
 	RET
 
 ;OPTIMIZER ADDED SUBROUTINE, CALLED 2 TIMES, CODE SIZE REDUCTION:4 WORDS
-SUBOPT_0xB:
+SUBOPT_0xC:
 	LDD  R26,Y+16
 	LDD  R27,Y+16+1
 	ADIW R26,4
@@ -2937,7 +3038,7 @@ SUBOPT_0xB:
 	RET
 
 ;OPTIMIZER ADDED SUBROUTINE, CALLED 2 TIMES, CODE SIZE REDUCTION:2 WORDS
-SUBOPT_0xC:
+SUBOPT_0xD:
 	LDD  R26,Y+16
 	LDD  R27,Y+16+1
 	ADIW R26,4
@@ -2947,7 +3048,7 @@ SUBOPT_0xC:
 	RET
 
 ;OPTIMIZER ADDED SUBROUTINE, CALLED 2 TIMES, CODE SIZE REDUCTION:1 WORDS
-SUBOPT_0xD:
+SUBOPT_0xE:
 	MOVW R26,R28
 	ADIW R26,12
 	CALL __ADDW2R15

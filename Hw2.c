@@ -1,4 +1,7 @@
 
+/*
+password is 4445
+*/
 
 #include <io.h>
 #include <mega32.h>
@@ -30,23 +33,29 @@ int pressed_key;
 
 void main(void)
 {
-   // char data[5];
-    // unsigned char password_set;
 
    
-   // EEPROM_write(201,2);
-  //  if(EEPROM_read(200) == 0)
-        //systemstate = locked;
-   
     
+    // EEPROM_write(100,0xff);                       //uncomment this line to set a new password
     unsigned char password_length;
     unsigned char password [10];                     // digits of password are stored in this array.
     int i;
     
+
+    
     lcd_init(40);
     lcd_clear();                                    // lcd initial settings
     
+    if(EEPROM_read(100) == 0){                      // check to see if device has a password.
 
+        systemstate = LOCKED; 
+        password_length = EEPROM_read(101);
+
+        for(i =0 ; i < password_length ; i++){
+            password[i] = EEPROM_read(102+i);
+            }
+            
+        }
     
     DDRC = 0xf0;                                   // port C settings, connected to keypad
     PORTC = 0x0e;                                    
@@ -74,19 +83,19 @@ void main(void)
     TCCR1B = 0x0B;                                  // f(t/c) = f(IO) / 64 from prescaler || enable CTC mode and set TOP to OCR1A value
       
     
-    DDRB.0 = DDRB.1 = 1; // pin.0 for yellow LED and pin.1 for green LED.
+    DDRB.0 = DDRB.1 = 1;                            // pin.0 for yellow LED and pin.1 for green LED.
 
                 
     DDRD.2 = DDRD.3 = 0; 
-    PORTD.2 = PORTD.3 = 1; //pull up
+    PORTD.2 = PORTD.3 = 1;                          //pull up
     
     MCUCR |= 0<<ISC00;
-    MCUCR |= 1<<ISC01; // falling edge.
-    GICR |= 1<<INT0;  // enable INT0 
+    MCUCR |= 1<<ISC01;                              // falling edge.
+    GICR |= 1<<INT0;                                // enable INT0 
     
     MCUCR |= 0<<ISC10;
-    MCUCR |= 1<<ISC11; // falling edge
-    GICR |= 1<<INT1;  // enable INT1
+    MCUCR |= 1<<ISC11;                              // falling edge
+    GICR |= 1<<INT1;                                // enable INT1
 
 
     while(1){
@@ -128,9 +137,11 @@ void main(void)
             while (new_key ==0);
             new_key =0;
             password_length = pressed_key % 10;
-            if(password_length < 4)
+            
+            if(password_length < 4)                         // minimum length of password is 4 digits.
                 password_length = 4;
-            /////////////////////////////////write password in eeprom
+
+            
             itoa(password_length,temp);
             lcd_gotoxy(0,0);
             lcd_putsf("Enter your password(");
@@ -148,6 +159,13 @@ void main(void)
                  lcd_puts(temp);
                  
                 }
+            #asm("cli");                                    // disable interrupts during eeprom write
+            EEPROM_write(100,0);
+            EEPROM_write(101,password_length);
+            
+            for (i =0 ; i< password_length ; i++)
+                EEPROM_write(102+i,password[i]);
+            #asm("sei");
             systemstate = LOCKED ;
             lcd_clear();
             lcd_gotoxy(0,0);
@@ -163,7 +181,7 @@ void main(void)
 }
 
 
-interrupt[TIM1_COMPA] void comparematch(void){     // interrupt happens every second
+interrupt[TIM1_COMPA] void comparematch(void){                      // interrupt happens every second
     
    
     
@@ -213,16 +231,15 @@ interrupt [EXT_INT2] void keyPressed(void){
 
     
    // find key 
-    char data[5];
-    int i,index;
+    int i;
     unsigned char pattern;  
     // delay_ms(20);   debounce
     
     new_key = 1;                                           
   
     
-    DDRC |= 0xf0;                       // leaves portc.0 unchanged. portc.0 is connected to sensor and used by ADC.
-    DDRC &= 0xf1;                       // same as above
+    DDRC |= 0xf0;                                                   // leaves portc.0 unchanged. portc.0 is connected to sensor and used by ADC.
+    DDRC &= 0xf1;                                                   // same as above
     PORTC &= 0x0f;                       
     PORTC |= 0x0e;                      
     delay_us(5);
@@ -232,7 +249,7 @@ interrupt [EXT_INT2] void keyPressed(void){
     PORTC |= 0xf0;
     PORTC &= 0xf1; 
     delay_us(5); 
-    pattern |= (PINC & 0b11110000) | 0x01;    // lsb is not connected to keypad, always gets the value 1
+    pattern |= (PINC & 0b11110000) | 0x01;                          // lsb is not connected to keypad, always gets the value 1
     for(i = 0 ; i < 12 ; i++){
         if(keypadPatterns[i] == pattern){
             pressed_key = i;
@@ -248,7 +265,7 @@ interrupt [EXT_INT2] void keyPressed(void){
 }
 
 
-void EEPROM_write(unsigned char uiAddress, unsigned char ucData){ // address is in 0-255 range
+void EEPROM_write(unsigned char uiAddress, unsigned char ucData){    // address is in 0-255 range
     /* Wait for completion of previous write */
     while(EECR & (1<<EEWE));
     /* Set up address and data registers */
