@@ -8,7 +8,7 @@ C=SnD Team
 D=12/10/2020 11:45:37 Þ.Ù
 Files=1
 OpenedFiles=1
-AllowDisplayFunctionCallTree=0
+AllowDisplayFunctionCallTree=1
 CleanUp=2
 DebugOutputListFilesDirectory=Debug\List
 DebugOutputObjectFilesDirectory=Debug
@@ -27,7 +27,7 @@ PageIndex0=0
 OF1=Hw2.c
 Active1=1
 EditorPanel1=0
-TimeStamp1=1363983953
+TimeStamp1=1364033989
 PageIndex1=1
 [CompilerDebug]
 Chip=ATmega32
@@ -532,16 +532,16 @@ Row=0
 Column=0
 ScrollPosX=0
 ScrollPosY=0
-TimeStamp=1363984246
+TimeStamp=1364034235
 [BookmarksFoldedCode]
 Files=1
 F1=Hw2.c
 [Bookmarks1]
-TimeStamp=1363983953
-Row=35
-Column=3
+TimeStamp=1364033989
+Row=267
+Column=5
 ScrollPosX=0
-ScrollPosY=23
+ScrollPosY=0
 BK0=-1
 BK1=-1
 BK2=-1
@@ -552,8 +552,6 @@ BK6=-1
 BK7=-1
 BK8=-1
 BK9=-1
-[FoldedCode1]
-Blocks=0
 [Header1]
 Files=8
 F1=D:\Micro\inc\io.h
@@ -564,3 +562,12 @@ F5=D:\Micro\inc\stdlib.h
 F6=D:\Micro\inc\stdio.h
 F7=D:\Micro\inc\stdarg.h
 F8=D:\Micro\inc\delay.h
+[FoldedCode1]
+Line1=34
+Line2=184
+Line3=217
+Line4=222
+Line5=229
+Line6=268
+Line7=283
+Blocks=7
