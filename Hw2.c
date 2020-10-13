@@ -39,8 +39,9 @@ void main(void)
         //systemstate = locked;
    
     
-    int password_length;
-    int password [10];
+    unsigned char password_length;
+    unsigned char password [10];                     // digits of password are stored in this array.
+    int i;
     
     lcd_init(40);
     lcd_clear();                                    // lcd initial settings
@@ -90,8 +91,28 @@ void main(void)
 
     while(1){
         if(systemstate == LOCKED){
+            char stars[10] = {0};
+            char temp[5];
+            int wrong_pass = 0;
             lcd_clear();
-            lcd_putsf("Locked");
+            lcd_gotoxy(0,0);
+            lcd_putsf("Locked. Enter your password:");
+            for(i = 0; i<password_length; i++){
+                 
+                 while(new_key == 0 );
+                 new_key = 0;
+                 lcd_gotoxy(0,1);
+                 lcd_puts(stars);
+                 stars[i]='*';
+                 itoa(pressed_key,temp);
+                 lcd_puts(temp);
+                 if(pressed_key != password[i])
+                    wrong_pass = 1;
+                 
+                }
+                
+                if(wrong_pass == 0)
+                    systemstate = UNLOCKED;
             }
         if(systemstate == UNLOCKED){
             lcd_clear();
@@ -101,7 +122,6 @@ void main(void)
         if(systemstate == SETPASSWORD){
             char temp[5];
             char stars[10];
-            int i;
             lcd_clear();
             lcd_gotoxy(0,0);
             lcd_putsf("set password(4-9 digits):");
@@ -110,7 +130,7 @@ void main(void)
             password_length = pressed_key % 10;
             if(password_length < 4)
                 password_length = 4;
-            /////////////////////////////////write in eeprom
+            /////////////////////////////////write password in eeprom
             itoa(password_length,temp);
             lcd_gotoxy(0,0);
             lcd_putsf("Enter your password(");
@@ -126,9 +146,9 @@ void main(void)
                  stars[i]='*';
                  itoa(pressed_key,temp);
                  lcd_puts(temp);
-                 delay_ms(1000);
+                 
                 }
-            systemstate = UNLOCKED ;
+            systemstate = LOCKED ;
             lcd_clear();
             lcd_gotoxy(0,0);
             lcd_putsf("Password is set, press any key ...");
